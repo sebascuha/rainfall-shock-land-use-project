@@ -1,0 +1,376 @@
+*****************************
+* 							*
+*		Regressions			*
+*							*
+*****************************
+/*
+ssc install csdid
+ssc install drdid
+*/
+
+clear all
+set more off
+
+local usuario=c(username)
+
+if "`usuario'"=="sebas"{
+	global mainpath= "C:\Users\sebas\Dropbox\Documents\Proyecto_UsosDeTierra"
+}
+*else if{
+*	global mainpath= ""
+*}
+
+cd "${mainpath}"
+
+use "CreatedData/dataset_landuse_v_py.dta",clear
+
+order codmpio year, first
+sort codmpio year
+
+// ---------------------------------------------------- //
+* Final edits
+
+bys codmpio: egen max_analyzed = max(total_analyzed)
+
+gen p_total_analyzed = total_analyzed / total_area_km2
+
+gen p_trees = (tree / p_total_analyzed) / total_area_km2
+gen p_trees_before = tree / total_area_km2
+
+foreach covar in /*total_analyzed*/ trees crops grass water flooded_vegetation built bare{
+	gen p_`covar' = (`covar') / total_area_km2
+}
+
+rename avg_weihted_ppm_muni avg_weighted_ppm_muni
+
+gen coddepto=(codmpio-mod(codmpio,1000))/1000
+*gen log_p_max_trees = log(p_max_trees)
+*tw scatter p_max_trees sd_before2000
+*tw scatter log_p_max_trees sd_before2000
+*tw scatter log_max_trees sd_before2000
+
+/// ------------------------------------------------------------------------------------------------------- ///
+/// 											Labeling data												///
+/// ------------------------------------------------------------------------------------------------------- ///
+
+
+* ============
+* Descriptive
+* ============
+* Km2
+lab var total_analyzed "Total area analized(km2)"
+lab var trees "Trees area in the municipality(km2)"
+lab var crops "Crops area in the municipality(km2)"
+lab var grass "Grass area in the municipality(km2)"
+lab var water "Water area in the municipality(km2)"
+lab var flooded_vegetation "Flooded vegetation area in the municipality(km2)"
+lab var built "Built area in the municipality(km2)"
+lab var bare "Bare area in the municipality(km2)"
+* ============
+* Precentages
+lab var p_total_analyzed "Percentage of total area analyzed"
+lab var p_trees "Percentage Trees area in the municipality"
+lab var p_crops "Percentage Crops area in the municipality"
+lab var p_grass "Percentage Grass area in the municipality"
+lab var p_water "Percentage Water area in the municipality"
+lab var p_flooded_vegetation "Percentage Flooded vegetation area in the municipality"
+lab var p_built "Percentage Built area in the municipality"
+lab var p_bare "Percentage Bare area in the municipality"
+* ============
+* Precipitation
+lab var avg_ppm_muni "Average precipitation(mm)"
+lab var avg_weighted_ppm_muni "Average precipitation weightened by subhydrographic zone(mm)"
+lab var avg_ppm_muni_hist "Historic average precipitation(mm)"
+lab var sd_ppm_muni_hist "Historic std. deviation precipitation(mm)"
+lab var deviation "Average precipitation deviation"
+lab var deviation_weighted "Average precipitation weighted deviation"
+
+* ============
+* Treatment
+lab var treat_1SD "1 if deviation greater than 1 historic SD"
+lab var treat_1_5SD "1 if deviation greater than 1.5 historic SD" 
+lab var treat_2SD "1 if deviation greater than 2 historic SD"
+lab var treat_2_5SD "1 if deviation greater than 2.5 historic SD"
+lab var treat_group_1SD "First extreme weather 1SD"
+lab var treat_group_1_5SD "First extreme weather 1.5SD" 
+lab var treat_group_2SD "First extreme weather 2SD"
+lab var treat_group_2_5SD "First extreme weather 2.5SD"
+lab var treat_dummy_1SD "1 Since treatment began 1SD"
+lab var treat_dummy_1_5SD "1 Since treatment began 1.5SD" 
+lab var treat_dummy_2SD "1 Since treatment began 2SD"
+lab var treat_dummy_2_5SD "1 Since treatment began 2.5SD"
+
+
+
+/// ------------------------------------------------------------------------------------------------------- ///
+///									Table 1: Descriptive Statistics											///
+/// -------------------------------------------------------------------------------------------------------	///
+/// 																										///
+/// Area analyzed: 						total_analyzed trees crops grass						 			///
+/// Percentage area analyzed: 			p_total_analyzed p_trees p_crops p_grass		 					///
+/// Average precipitation:				avg_ppm_muni avg_weighted_ppm_muni 									///
+///										avg_ppm_muni_hist sd_ppm_muni_hist									///
+/// Deviation: 							deviation deviation_weighted										///
+/// 																										///
+/// ------------------------------------------------------------------------------------------------------- ///
+
+sum total_analyzed trees crops grass water flooded_vegetation built bare avg_ppm_muni avg_weighted_ppm_muni avg_ppm_muni_hist sd_ppm_muni_hist deviation deviation_weighted treat_1SD treat_1_5SD treat_2SD treat_2_5SD treat_group_1SD treat_group_1_5SD treat_group_2SD treat_group_2_5SD treat_dummy_1SD treat_dummy_1_5SD treat_dummy_2SD treat_dummy_2_5SD p_total_analyzed p_trees p_crops p_grass p_water p_flooded_vegetation p_built p_bare
+
+*** ---- Slides ---- ****
+/*
+eststo DS_1: estpost summarize total_analyzed trees crops grass // Area analyzed
+esttab . using "Slides/Tables/desstats_1.tex", cells("mean(fmt(%9.2f)) sd(fmt(%9.2f)) min(fmt(%9.2f)) max(fmt(%9.2f)) count(fmt(%9.2f))") label replace
+eststo DS_2: estpost summarize p_total_analyzed p_trees p_crops p_grass // Percentage area analyzed
+esttab . using "Slides/Tables/desstats_2.tex", cells("mean(fmt(%9.2f)) sd(fmt(%9.2f)) min(fmt(%9.2f)) max(fmt(%9.2f)) count(fmt(%9.0f))") label replace
+eststo DS_3: estpost summarize avg_ppm_muni avg_weighted_ppm_muni avg_ppm_muni_hist sd_ppm_muni_hist
+esttab . using "Slides/Tables/desstats_3.tex", cells("mean(fmt(%9.2f)) sd(fmt(%9.2f)) min(fmt(%9.2f)) max(fmt(%9.2f)) count(fmt(%9.0f))") label replace
+eststo DS_4: estpost summarize deviation deviation_weighted 
+esttab . using "Slides/Tables/desstats_4.tex", cells("mean(fmt(%9.2f)) sd(fmt(%9.2f)) min(fmt(%9.2f)) max(fmt(%9.2f)) count(fmt(%9.0f))") label replace
+*/
+
+*** ---- Paper ---- ****
+/*
+eststo DS_1: estpost summarize total_analyzed trees crops grass // Area analyzed
+esttab . using "Paper/Tables/desstats_1.tex", cells("mean(fmt(%9.2f)) sd(fmt(%9.2f)) min(fmt(%9.2f)) max(fmt(%9.2f)) count(fmt(%9.0f))") label replace
+eststo DS_2: estpost summarize p_total_analyzed p_trees p_crops p_grass // Percentage area analyzed
+esttab . using "Paper/Tables/desstats_2.tex", cells("mean(fmt(%9.2f)) sd(fmt(%9.2f)) min(fmt(%9.2f)) max(fmt(%9.2f)) count(fmt(%9.0f))") label replace
+eststo DS_3: estpost summarize avg_ppm_muni avg_weighted_ppm_muni avg_ppm_muni_hist sd_ppm_muni_hist
+esttab . using "Paper/Tables/desstats_3.tex", cells("mean(fmt(%9.2f)) sd(fmt(%9.2f)) min(fmt(%9.2f)) max(fmt(%9.2f)) count(fmt(%9.0f))") label replace
+eststo DS_4: estpost summarize deviation deviation_weighted 
+esttab . using "Paper/Tables/desstats_4.tex", cells("mean(fmt(%9.2f)) sd(fmt(%9.2f)) min(fmt(%9.2f)) max(fmt(%9.2f)) count(fmt(%9.0f))") label replace
+*/
+
+// --------------------------------------------- //
+//				Regressions - TWFE				 //
+// --------------------------------------------- // 
+//						TWFE					 //
+// --------------------------------------------- //
+//												 //
+// 		Portion of trees in municipal area		 //
+//												 //
+// --------------------------------------------- //
+preserve
+local SDs "1SD 1_5SD 2SD 2_5SD" // robust errors
+foreach var_reg in p_trees p_crops p_grass {
+	foreach SD of local SDs{
+		// Regression
+		qui eststo `var_reg'_`SD': reghdfe `var_reg' treat_dummy_`SD' if treat_group_1SD != 2015, abs(codmpio year) vce(robust)
+		qui estadd scalar m_c= _b[_cons]
+		qui unique codmpio if treat_dummy_`SD'==1
+		qui estadd local munitreated = r(unique)
+		qui unique codmpio
+		qui estadd local totmunis = r(unique)
+	}
+	
+	* ---------------- Exporting all regressions ---------------- *
+	* -- Slides -- *
+	estout `var_reg'_1SD `var_reg'_1_5SD `var_reg'_2SD `var_reg'_2_5SD ///
+	using "Slides/Tables/TWFE/TWFE_`var_reg'_rob.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) d(_cons) ///
+	prefoot(\midrule ) stats(m_c munitreated totmunis N r2 , fmt(%6.3f %3.0f %3.0f %6.0f a2 %11.2f) ///
+	labels ("Mean Dep.Var. Control" "N. Obs" "\$R^2\$" )) replace
+	* -- Paper --*
+	estout `var_reg'_1SD `var_reg'_1_5SD `var_reg'_2SD `var_reg'_2_5SD ///
+	using "Paper/Tables/TWFE/TWFE_`var_reg'_rob.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) d(_cons) ///
+	prefoot(\midrule ) stats(m_c munitreated totmunis N r2 , fmt(%6.3f %3.0f %3.0f %6.0f a2 %11.2f) ///
+	labels ("Mean Dep.Var. Control" "Municipalities treated" "N. Obs" "\$R^2\$" )) replace
+}
+restore
+* ---------------- Exporting final tables ---------------- *
+* -- Slides -- *
+estout p_trees_2SD  p_grass_2SD  p_crops_2SD ///
+using "Slides/Tables/TWFE_landuse_rob.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) d(_cons) ///
+prefoot(\midrule ) ///
+stats(m_c munitreated totmunis N r2 , fmt(%3.2f %3.0f %3.0f %6.0f a2 %11.2f) ///
+labels ("Mean Dep.Var. Control" "Treated Munis" "Munis Analyzed"  "N. Obs" "\$R^2\$" )) replace
+* -- Paper --*
+estout p_trees_2SD  p_grass_2SD  p_crops_2SD ///
+using "Paper/Tables/TWFE/TWFE_landuse_rob.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) d(_cons) ///
+prefoot(\midrule ) ///
+stats(m_c munitreated totmunis N r2 , fmt(%3.2f %3.0f %3.0f %6.0f a2 %11.2f) ///
+labels ("Mean Dep.Var. Control" "Treated Munis" "Munis Analyzed"  "N. Obs" "\$R^2\$" )) replace
+
+/// --------------------------------------------------- ///
+///			Regressions - Callaway Sant' Anna			///
+/// ---------------------------------------------------	///
+set scheme s1mono
+
+local SDs "1SD 1_5SD 2SD 2_5SD" // robust errors
+foreach var_reg in p_trees p_grass p_crops{
+	foreach SD of local SDs{
+		csdid `var_reg', ivar(codmpio) time(year) gvar(treat_group_`SD') wboot agg(group) notyet
+		estat event, estore(cs_`var_reg'_`SD')
+		estat simple, estore(cs_sim_`var_reg'_`SD')
+		estat group, estore(cs_gp_`var_reg'_`SD')
+		estat calendar, estore(cs_cal_`var_reg'_`SD')
+		estat event, window(-4 6)
+		csdid_plot
+		/*
+		event_plot cs_`var_reg'_p00_`SD', default_look  ///
+		graph_opt(xtitle("Periods since the event") ytitle("Average effect") ///
+		xlabel(-6(1)6)) stub_lag(Tm4#) stub_lead(Tm#) ciplottype(rcap) together
+		*/
+		graph export "Slides/Figures/CS/ES_`var_reg'_`SD'.pdf", replace
+		graph export "Paper/Figures/CS/ES_`var_reg'_`SD'.pdf", replace
+	}	
+}
+
+// ------------------------------------------------------- //
+// 				Export table: main results				   //
+// ------------------------------------------------------- //
+// only ATT
+local SDs "1SD 1_5SD 2SD 2_5SD"
+foreach SD of local SDs{
+	estout cs_sim_p_trees_`SD' cs_sim_p_grass_`SD' cs_sim_p_crops_`SD' /// 
+	using "Slides/Tables/CS/CS_estimation_`SD'.tex",style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) replace
+	estout  cs_sim_p_trees_`SD' cs_sim_p_grass_`SD' cs_sim_p_crops_`SD' ///
+	using "Paper/Tables/CS/CS_estimation_`SD'.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) replace
+}
+
+// With lags
+local SDs "1SD 1_5SD 2SD 2_5SD"
+foreach SD of local SDs{
+	estout cs_p_trees_`SD' cs_p_grass_`SD' cs_p_crops_`SD' /// 
+	using "Slides/Tables/CS/CS_estimationES_`SD'.tex",style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) replace
+	estout  cs_p_trees_`SD' cs_p_grass_`SD' cs_p_crops_`SD' ///
+	using "Paper/Tables/CS/CS_estimationES_`SD'.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) replace
+}
+
+// Group analysis
+local SDs "1SD 1_5SD 2SD 2_5SD"
+foreach SD of local SDs{
+	estout cs_gp_p_trees_`SD' cs_gp_p_grass_`SD' cs_gp_p_crops_`SD' /// 
+	using "Slides/Tables/CS/CS_estimation_gp_`SD'.tex",style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) replace
+	estout cs_gp_p_trees_`SD' cs_gp_p_grass_`SD' cs_gp_p_crops_`SD' ///
+	using "Paper/Tables/CS/CS_estimation_gp_`SD'.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) replace
+}
+
+// Calendar analysis
+local SDs "1SD 1_5SD 2SD 2_5SD"
+foreach SD of local SDs{
+	estout cs_cal_p_trees_`SD' cs_cal_p_grass_`SD' cs_cal_p_crops_`SD' /// 
+	using "Slides/Tables/CS/CS_estimation_cal_`SD'.tex",style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) replace
+	estout cs_cal_p_trees_`SD' cs_cal_p_grass_`SD' cs_cal_p_crops_`SD' ///
+	using "Paper/Tables/CS/CS_estimation_cal_`SD'.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+	label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) replace
+}
+
+// ---------------------------------- //
+//				Graphics			  //
+// ---------------------------------- //
+local SDs "1SD 1_5SD 2SD 2_5SD"
+foreach SD of local SDs{
+	preserve
+		set scheme plotplain
+		duplicates drop codmpio,force
+		keep if treat_group_`SD'>0
+		graph bar (count), over(treat_group_`SD') blabel(bar) ytitle("# municipalities treated")
+		graph export "Slides/Figures/treatment_count`SD'.pdf", replace
+		graph export "Paper/Figures/treatment_count`SD'.pdf", replace
+	restore
+}
+
+foreach var_reg in p_trees p_grass p_crops {
+	coefplot ///
+	(cs_`var_reg'_1SD, label(1SD) mcolor(dkgreen) ciopts(color(dkgreen%50)) rename(Pre_avg="Pre-treatment" Post_avg="Post-treatment")) /// 
+	(cs_`var_reg'_1_5SD, label(1_5SD) mcolor(blue) ciopts(color(blue%50)) rename(Pre_avg="Pre-treatment" Post_avg="Post-treatment")) ///
+	(cs_`var_reg'_2SD, label(2SD) mcolor(red) ciopts(color(red%50)) rename(Pre_avg="Pre-treatment" Post_avg="Post-treatment")) ///
+	(cs_`var_reg'_2_5SD, label(2_5SD) mcolor(purple) ciopts(color(violet%50)) rename(Pre_avg="Pre-treatment" Post_avg="Post-treatment")), ///
+	vertical yline(0) keep(Pre_avg Post_avg)
+graph export "Slides/Figures/pre_pos_`var_reg'.pdf", replace
+graph export "Paper/Figures/pre_pos_`var_reg'.pdf", replace
+}
+eststo clear
+
+
+/*
+/// --------------------------------------------------- ///
+///				Regressions - Chaisemartin				///
+/// ---------------------------------------------------	///
+
+/* Install packages
+ssc install gtools, replace
+ssc install did_multiplegt_dyn, replace
+*/
+
+* did_multiplegt_dyn p_max_trees codmpio year t_dummy_pre2000_3SD, effects(7) design(0.5,"console") normalized effects_equal placebo(2)
+est clear
+foreach var_reg in p_max_trees p_max_grass p_max_crops {
+	local SDs "1SD 1_5SD 2SD 2_5SD"
+	foreach SD of local SDs{
+		* Making regressions
+		 /// 
+		did_multiplegt_dyn `var_reg' codmpio year t_dummy_pre2000_`SD', effects(7) placebo(2) ///
+		effects_equal cluster(coddepto) ci_level(95) graph_off
+		estadd scalar p_joint = e(p_equality_effects)
+		estadd scalar p_placebo = e(p_jointplacebo)
+		eststo model_`var_reg'_`SD'
+		* Saving plots 
+		event_plot e(estimates)#e(variances), default_look  ///
+			graph_opt(xtitle("Periods since the event") ytitle("Average causal effect") ///
+			xlabel(-2(1)7)) stub_lag(Effect_#) stub_lead(Placebo_#) together ciplottype(rcap)	
+		graph export "Slides/Figures/multiplegt_dyn_`var_reg'_`SD'.png", replace
+		graph export "Paper/Figures/multiplegt_dyn_`var_reg'_`SD'.png", replace
+		
+	}
+}
+/// ------------------------ Complete Table ------------------------------ ///
+* --- Slides --- *
+estout model_p_max_trees_2SD model_p_max_grass_2SD model_p_max_crops_2SD ///
+using "Slides/Tables/multiplegt_dyn.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) ///
+prefoot(\midrule ) stats(p_joint p_placebo, fmt(a2 a2)) ///
+/*labels ("P-joint" "P-placebo"))*/ replace
+* --- Paper --- *
+estout model_p_max_trees_2SD model_p_max_grass_2SD model_p_max_crops_2SD ///
+using "Paper/Tables/multiplegt_dyn.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) ///
+prefoot(\midrule ) stats(p_joint p_placebo, fmt(a2 a2)) ///
+/*labels ("P-joint" "P-placebo"))*/ replace
+
+/// ------------------------ Average Effects ------------------------------ ///
+* --- Slides --- *
+estout model_p_max_trees_2SD model_p_max_grass_2SD model_p_max_crops_2SD ///
+using "Slides/Tables/multiplegt_dyn.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) ///
+keep(Av_tot_eff) prefoot(\midrule ) stats(p_joint p_placebo, fmt(a2 a2)) ///
+/*labels ("P-joint" "P-placebo"))*/ replace
+* --- Paper --- *
+estout model_p_max_trees_2SD model_p_max_grass_2SD model_p_max_crops_2SD ///
+using "Paper/Tables/multiplegt_dyn_gen.tex", style(tex) starl(* 0.10 ** 0.05 *** 0.01) /// 
+label cells(b(star fmt(a2)) se(par fmt(a2))) mlabels(none) collabels(none) ///
+keep(Av_tot_eff) prefoot(\midrule ) stats(p_joint p_placebo, fmt(a2 a2)) ///
+/*labels ("P-joint" "P-placebo"))*/ replace
+est clear
+
+did_multiplegt_dyn p_max_trees codmpio year t_dummy_pre2000_3SD, effects(7) effects_equal placebo(2) cluster(coddepto) ci_level(95) graph_off
+
+event_plot e(estimates)#e(variances), default_look  ///
+	graph_opt(xtitle("Periods since the event") ytitle("Average causal effect") ///
+	xlabel(-2(1)7)) stub_lag(Effect_#) stub_lead(Placebo_#) together ciplottype(rcap)
+graph export "Slides/Figures/pre_pos_`var_reg'.png", replace
+graph export "Paper/Figures/pre_pos_`var_reg'.png", replace
+
+
+did_multiplegt_dyn p_max_trees codmpio year t_dummy_pre2000_3SD, placebo(1) cluster(coddepto) ci_level(95) graphoptions(yline(0))
+did_multiplegt_dyn p_max_trees codmpio year t_dummy_pre2000_2SD, effects(7) cluster(coddepto) ci_level(95) graphoptions(yline(0))
+
+
+did_multiplegt_dyn p_max_crops codmpio year t_dummy_pre2000_1SD, placebo(1) cluster(coddepto) ci_level(95)
+did_multiplegt_dyn p_max_crops codmpio year t_dummy_pre2000_1SD, effects(7) cluster(coddepto) ci_level(95)
+
+did_multiplegt_dyn p_max_grass codmpio year t_dummy_pre2000_1SD, placebo(1) cluster(coddepto) ci_level(95)
+did_multiplegt_dyn p_max_grass codmpio year t_dummy_pre2000_1SD, effects(7) cluster(coddepto) ci_level(95)
+
+
+eststo clear
